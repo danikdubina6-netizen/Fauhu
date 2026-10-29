@@ -1,0 +1,9 @@
+{
+  "name": "ryadom",
+  "version": "1.0.0",
+  "description": "Передача файлов между устройствами в одной Wi-Fi сети (WebRTC)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}
