@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Рядом: передача файлов</title>
+<style>
+:root{
+  --bg:#f1f5f9; --ink:#12243a; --mute:#5b6d82; --line:#cfd9e4;
+  --card:#ffffff; --accent:#087f86; --accent-ink:#ffffff;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0d1a2b; --ink:#e7eef6; --mute:#8da0b6; --line:#24394f; --card:#15283d; --accent:#35cfc4; --accent-ink:#06222a; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh; padding:env(safe-area-inset-top,0) 16px env(safe-area-inset-bottom,0);
+}
+header{max-width:560px;margin:0 auto;padding:20px 0 4px}
+h1{margin:0;font-size:28px;letter-spacing:-.02em}
+#me{margin:4px 0 0;color:var(--mute)}
+main{max-width:560px;margin:0 auto;padding-bottom:32px}
+
+.radar{position:relative;width:100%;aspect-ratio:1;margin:8px auto 0}
+.ring{position:absolute;inset:0;margin:auto;border-radius:50%;border:1px solid var(--line)}
+.ring.r1{width:34%;height:34%}
+.ring.r2{width:68%;height:68%}
+.ring.r3{width:100%;height:100%;animation:pulse 4s ease-out infinite}
+@keyframes pulse{0%{opacity:.9;transform:scale(.7)}100%{opacity:0;transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.ring.r3{animation:none}}
+
+.me{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:76px;height:76px;border-radius:50%;
+  background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:32px;
+}
+
+.node{position:absolute;transform:translate(-50%,-50%);width:104px;text-align:center}
+.dev{
+  --p:0;
+  width:78px;height:78px;border:0;padding:4px;border-radius:50%;cursor:pointer;
+  background:conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0);
+  transition:transform .15s;
+}
+.dev:hover,.dev.over{transform:scale(1.08)}
+.dev:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.dev span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--card);font-size:30px}
+.lbl{font-size:13px;font-weight:600;line-height:1.2;margin-top:6px}
+.st{font-size:12px;color:var(--mute);min-height:15px}
+
+.hint{text-align:center;color:var(--mute);margin:12px 8px 0}
+#inbox{margin-top:24px}
+#inbox h2{font-size:18px;margin:0 0 8px}
+#files{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+#files li{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+}
+.fi{flex:1;min-width:0}
+.fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.fm{font-size:13px;color:var(--mute)}
+#files a{
+  background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;
+  padding:8px 14px;border-radius:999px;
+}
+.pill{background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.pill.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.pill:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#qrBtn{margin-top:12px}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);width:calc(100% - 32px);max-width:340px;padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h2{margin:0 0 6px;font-size:18px}
+.sub{margin:0;color:var(--mute);font-size:14px}
+.qrbox{background:#fff;padding:12px;border-radius:12px;width:max-content;margin:14px auto 10px;min-width:100px;min-height:100px;word-break:break-all;color:#000;font-size:12px}
+.code{font:700 28px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-align:center;margin:0 0 14px}
+.row{display:flex;gap:8px;margin:8px 0}
+.row input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;text-transform:uppercase;letter-spacing:.15em}
+.col{display:grid;gap:8px;margin-top:8px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Рядом</h1>
+  <p id="me">Подключаюсь…</p>
+  <button class="pill" id="qrBtn">Подключить по QR</button>
+</header>
+<main>
+  <div class="radar" id="radar">
+    <div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
+    <div class="me" id="meIcon" aria-hidden="true">📡</div>
+  </div>
+  <p class="hint" id="hint"></p>
+  <section id="inbox" hidden>
+    <h2>Получено</h2>
+    <ul id="files"></ul>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <h2>Передача между разными сетями</h2>
+  <p class="sub">Отсканируй этот QR камерой на втором устройстве. Страница откроется сразу в общей комнате.</p>
+  <div class="qrbox" id="qr"></div>
+  <p class="code" id="codeText"></p>
+  <div class="row">
+    <input id="codeIn" maxlength="6" placeholder="Код с другого устройства" autocomplete="off" autocapitalize="characters">
+    <button class="pill" id="joinBtn">Войти</button>
+  </div>
+  <div class="col">
+    <button class="pill ghost" id="wifiBtn">Вернуться в Wi-Fi сеть</button>
+    <button class="pill ghost" id="closeBtn">Закрыть</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const radar = $('#radar');
+let RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const PIECE = 16 * 1024;      // размер одного пакета
+const SLICE = 1024 * 1024;    // сколько читаем с диска за раз
+
+let ws, me = null;
+
+/* ---------- Комнаты: Wi-Fi сеть (по умолчанию) или общий код ---------- */
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+let room = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+if (!/^[A-Z0-9]{6}$/.test(room)) room = '';
+let fastReconnect = false;
+
+const newCode = () => [...crypto.getRandomValues(new Uint8Array(6))].map(x => ALPHA[x % ALPHA.length]).join('');
+
+function showMe() {
+  $('#me').textContent = me ? `Ты: ${me.name} · ${room ? 'комната ' + room : 'Wi-Fi сеть'}` : 'Подключаюсь…';
+}
+
+function switchRoom(code) {
+  room = code;
+  const url = new URL(location.href);
+  if (code) url.searchParams.set('room', code); else url.searchParams.delete('room');
+  history.replaceState(null, '', url);
+  fastReconnect = true;
+  if (ws) ws.close();
+}
+
+function drawQR() {
+  const box = $('#qr');
+  box.innerHTML = '';
+  const link = `${location.origin}/?room=${room}`;
+  $('#codeText').textContent = room;
+  if (window.QRCode) new QRCode(box, { text: link, width: 192, height: 192, correctLevel: QRCode.CorrectLevel.M });
+  else box.textContent = link; // нет интернета для библиотеки QR: показываем ссылку текстом
+}
+
+$('#qrBtn').onclick = () => {
+  if (!room) switchRoom(newCode());
+  drawQR();
+  $('#dlg').showModal();
+};
+$('#joinBtn').onclick = () => {
+  const code = $('#codeIn').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{6}$/.test(code)) { $('#codeIn').focus(); return; }
+  $('#codeIn').value = '';
+  switchRoom(code);
+  drawQR();
+};
+$('#wifiBtn').onclick = () => { switchRoom(''); $('#dlg').close(); };
+$('#closeBtn').onclick = () => $('#dlg').close();
+const peers = new Map(); // id -> {id,name,emoji,el,pc,dc,rx,pending}
+
+/* ---------- Подключение к серверу ---------- */
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws${room ? '?room=' + room : ''}`);
+
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'init') {
+      me = m.me;
+      if (m.iceServers) RTC_CONFIG = { iceServers: m.iceServers };
+      showMe();
+      $('#meIcon').textContent = me.emoji;
+      m.peers.forEach(addPeer);
+    } else if (m.type === 'peer-joined') addPeer(m.peer);
+    else if (m.type === 'peer-left') removePeer(m.id);
+    else if (m.type === 'signal') onSignal(m.from, m.data);
+  };
+
+  ws.onclose = () => {
+    me = null;
+    $('#me').textContent = fastReconnect ? 'Подключаюсь…' : 'Нет связи, переподключаюсь…';
+    [...peers.keys()].forEach(removePeer);
+    setTimeout(connect, fastReconnect ? 100 : 2000);
+    fastReconnect = false;
+  };
+}
+
+const sendSignal = (to, data) => ws.send(JSON.stringify({ type: 'signal', to, data }));
+
+/* ---------- Устройства на экране ---------- */
+function updateHint() {
+  $('#hint').textContent = peers.size
+    ? 'Нажми на устройство и выбери файлы. Или перетащи файлы прямо на него.'
+    : room
+      ? 'Пока никого нет. Отсканируй QR на втором устройстве или введи код комнаты.'
+      : 'Пока никого нет. Открой эту страницу на другом устройстве в той же Wi-Fi сети.';
+}
+
+function layout() {
+  const list = [...peers.values()];
+  list.forEach((p, i) => {
+    const outer = i >= 6;
+    const idx = outer ? i - 6 : i;
+    const count = outer ? list.length - 6 : Math.min(list.length, 6);
+    const r = outer ? 41 : 25;
+    const a = (idx / count) * 2 * Math.PI - Math.PI / 2 + (outer ? 0.5 : 0);
+    p.el.style.left = 50 + r * Math.cos(a) + '%';
+    p.el.style.top = 50 + r * Math.sin(a) + '%';
+  });
+}
+
+function addPeer(info) {
+  if (peers.has(info.id)) return;
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.innerHTML = '<button class="dev"><span></span></button><div class="lbl"></div><div class="st"></div>';
+  const btn = el.querySelector('.dev');
+  el.querySelector('span').textContent = info.emoji;
+  el.querySelector('.lbl').textContent = info.name;
+  btn.setAttribute('aria-label', `Отправить файлы: ${info.name}`);
+
+  btn.onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.multiple = true;
+    input.onchange = () => sendFiles(info.id, [...input.files]);
+    input.click();
+  };
+  btn.ondragover = e => { e.preventDefault(); btn.classList.add('over'); };
+  btn.ondragleave = () => btn.classList.remove('over');
+  btn.ondrop = e => {
+    e.preventDefault(); btn.classList.remove('over');
+    sendFiles(info.id, [...e.dataTransfer.files]);
+  };
+
+  radar.appendChild(el);
+  peers.set(info.id, { ...info, el, pc: null, dc: null, rx: null, pending: [] });
+  layout(); updateHint();
+}
+
+function removePeer(id) {
+  const p = peers.get(id);
+  if (!p) return;
+  if (p.pc) p.pc.close();
+  p.el.remove();
+  peers.delete(id);
+  layout(); updateHint();
+}
+
+function setStatus(id, text, pct) {
+  const p = peers.get(id);
+  if (!p) return;
+  p.el.querySelector('.st').textContent = text;
+  p.el.querySelector('.dev').style.setProperty('--p', pct ?? 0);
+}
+
+/* ---------- WebRTC ---------- */
+function newConnection(id) {
+  const p = peers.get(id);
+  if (p.pc) p.pc.close();
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+  p.pc = pc; p.dc = null;
+  pc.onicecandidate = e => e.candidate && sendSignal(id, { candidate: e.candidate });
+  pc.ondatachannel = e => setupChannel(id, e.channel);
+  pc.onconnectionstatechange = () => {
+    if (['failed', 'closed'].includes(pc.connectionState) && p.pc === pc) { p.pc = null; p.dc = null; }
+  };
+  return pc;
+}
+
+async function flushPending(p) {
+  while (p.pending.length) await p.pc.addIceCandidate(p.pending.shift()).catch(() => {});
+}
+
+async function onSignal(from, data) {
+  const p = peers.get(from);
+  if (!p) return;
+  if (data.sdp) {
+    if (data.sdp.type === 'offer') {
+      const pc = newConnection(from);
+      await pc.setRemoteDescription(data.sdp);
+      await flushPending(p);
+      await pc.setLocalDescription(await pc.createAnswer());
+      sendSignal(from, { sdp: pc.localDescription });
+    } else if (p.pc) {
+      await p.pc.setRemoteDescription(data.sdp);
+      await flushPending(p);
+    }
+  } else if (data.candidate) {
+    if (p.pc && p.pc.remoteDescription) p.pc.addIceCandidate(data.candidate).catch(() => {});
+    else p.pending.push(data.candidate);
+  }
+}
+
+async function connectTo(id) {
+  const p = peers.get(id);
+  if (p.dc && p.dc.readyState === 'open') return p.dc;
+  const pc = newConnection(id);
+  const dc = pc.createDataChannel('files');
+  setupChannel(id, dc);
+  await pc.setLocalDescription(await pc.createOffer());
+  sendSignal(id, { sdp: pc.localDescription });
+  await new Promise((resolve, reject) => {
+    dc.addEventListener('open', resolve, { once: true });
+    setTimeout(() => reject(new Error('timeout')), 10000);
+  });
+  return dc;
+}
+
+/* ---------- Приём ---------- */
+function setupChannel(id, dc) {
+  const p = peers.get(id);
+  if (!p) return;
+  dc.binaryType = 'arraybuffer';
+  p.dc = dc;
+  dc.onmessage = e => {
+    if (typeof e.data === 'string') {
+      const m = JSON.parse(e.data);
+      if (m.t === 'meta') {
+        p.rx = { name: m.name, size: m.size, type: m.type, chunks: [], got: 0 };
+        setStatus(id, 'Получаю…', 0);
+      } else if (m.t === 'end' && p.rx) {
+        finishReceive(id, p.rx);
+        p.rx = null;
+      }
+    } else if (p.rx) {
+      p.rx.chunks.push(e.data);
+      p.rx.got += e.data.byteLength;
+      const pct = p.rx.size ? Math.round(p.rx.got / p.rx.size * 100) : 100;
+      setStatus(id, `Получаю ${pct}%`, pct);
+    }
+  };
+}
+
+function formatSize(b) {
+  if (b < 1024) return b + ' Б';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' КБ';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' МБ';
+  return (b / 1073741824).toFixed(2) + ' ГБ';
+}
+
+function finishReceive(id, rx) {
+  const p = peers.get(id);
+  const blob = new Blob(rx.chunks, { type: rx.type || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  const li = document.createElement('li');
+  li.innerHTML = '<div class="fi"><div class="fn"></div><div class="fm"></div></div><a>Скачать</a>';
+  li.querySelector('.fn').textContent = rx.name;
+  li.querySelector('.fm').textContent = `${formatSize(rx.size)} · от ${p ? p.name : 'устройства'}`;
+  const a = li.querySelector('a');
+  a.href = url; a.download = rx.name;
+  $('#files').prepend(li);
+  $('#inbox').hidden = false;
+
+  setStatus(id, 'Получено', 100);
+  setTimeout(() => setStatus(id, '', 0), 2500);
+}
+
+/* ---------- Отправка ---------- */
+async function sendFiles(id, files) {
+  if (!files.length) return;
+  try {
+    setStatus(id, 'Соединяюсь…', 0);
+    const dc = await connectTo(id);
+    dc.bufferedAmountLowThreshold = 1024 * 1024;
+
+    for (const [n, file] of files.entries()) {
+      dc.send(JSON.stringify({ t: 'meta', name: file.name, size: file.size, type: file.type }));
+      let sent = 0;
+      while (sent < file.size) {
+        const slice = new Uint8Array(await file.slice(sent, sent + SLICE).arrayBuffer());
+        for (let o = 0; o < slice.length; o += PIECE) {
+          if (dc.bufferedAmount > 4 * 1024 * 1024) {
+            await new Promise(r => dc.addEventListener('bufferedamountlow', r, { once: true }));
+          }
+          dc.send(slice.subarray(o, o + PIECE));
+        }
+        sent += slice.length;
+        const pct = Math.round(sent / file.size * 100);
+        setStatus(id, `Отправляю ${n + 1}/${files.length}: ${pct}%`, pct);
+      }
+      dc.send(JSON.stringify({ t: 'end' }));
+    }
+    setStatus(id, 'Отправлено', 100);
+  } catch (err) {
+    setStatus(id, 'Не вышло. Проверь, что оба устройства в одной сети', 0);
+  }
+  setTimeout(() => setStatus(id, '', 0), 3500);
+}
+
+updateHint();
+connect();
+</script>
+</body>
+</html>
