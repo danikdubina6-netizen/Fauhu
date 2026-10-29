@@ -1,0 +1,17 @@
+# Будит и не даёт уснуть серверу на Render (бесплатный тариф засыпает после 15 минут тишины).
+name: Keep Render awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # каждые 10 минут
+  workflow_dispatch:          # можно запустить вручную во вкладке Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping server
+        env:
+          RENDER_URL: ${{ secrets.RENDER_URL }}
+        run: |
+          curl -fsS --retry 4 --retry-delay 15 --max-time 90 "$RENDER_URL/healthz"
